@@ -1,0 +1,44 @@
+📝 TEMPLATES HTML À CRÉER
+═════════════════════════
+
+Les templates HTML ne sont pas inclus dans ce ZIP.
+Vous devez créer les fichiers suivants dans app/templates/ :
+
+✅ TEMPLATES REQUIS :
+
+1. base.html
+   - Layout principal avec navbar et footer
+   - Inclut CSS, JS, Chart.js
+   - Système de messages flash
+
+2. index.html
+   - Dashboard avec métriques
+   - Graphiques Chart.js
+   - Cards des modèles
+
+3. test.html
+   - Upload d'image (drag & drop)
+   - Sélection du modèle
+   - Affichage des résultats
+
+4. comparison.html
+   - Upload d'image
+   - Grille 3 colonnes pour comparaison
+   - Graphiques comparatifs
+
+5. attacks.html
+   - Upload d'image
+   - Sélection type d'attaque (FGSM/PGD/Trigger)
+   - Sliders pour epsilon/iterations
+   - Affichage avant/après
+
+6. login.html
+   - Formulaire de connexion
+   - Design moderne centré
+
+7. about.html
+   - Description du projet
+   - Technologies utilisées
+   - Documentation
+
+💡 ASTUCE : Utilisez le prompt fourni pour générer ces templates !

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erreur 500 - Erreur interne du serveur</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .error-container {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+        }
+        .error-code {
+            font-size: 120px;
+            font-weight: bold;
+            margin: 0;
+            color: #ff6b6b;
+        }
+        .error-message {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        .error-details {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: monospace;
+            text-align: left;
+            overflow-x: auto;
+        }
+        .btn {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #667eea;
+        }
+        .btn-secondary:hover {
+            background: #5a6fd8;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h1 class="error-code">500</h1>
+        <h2 class="error-message">Erreur interne du serveur</h2>
+        
+        {% if error %}
+        <div class="error-details">
+            <strong>Détails de l'erreur:</strong><br>
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <p>Une erreur s'est produite lors du traitement de votre requête.</p>
+        
+        <div>
+            <a href="/" class="btn">Retour à l'accueil</a>
+            <a href="/test" class="btn btn-secondary">Page de test</a>
+        </div>
+        
+        <p style="margin-top: 30px; font-size: 14px; opacity: 0.8;">
+            Si le problème persiste, contactez l'administrateur.
+        </p>
+    </div>
+</body>
+</html>

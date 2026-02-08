@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erreur 404 - Page non trouvée</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .error-container {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+        }
+        .error-code {
+            font-size: 120px;
+            font-weight: bold;
+            margin: 0;
+            color: #ff6b6b;
+        }
+        .error-message {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        .btn {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #667eea;
+        }
+        .btn-secondary:hover {
+            background: #5a6fd8;
+        }
+        .search-box {
+            margin: 30px 0;
+            display: flex;
+            gap: 10px;
+        }
+        .search-box input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .search-box button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0 25px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h1 class="error-code">404</h1>
+        <h2 class="error-message">Page non trouvée</h2>
+        
+        <p>La page que vous recherchez n'existe pas ou a été déplacée.</p>
+        
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Rechercher sur le site...">
+            <button onclick="searchSite()">Rechercher</button>
+        </div>
+        
+        <div>
+            <a href="/" class="btn">Retour à l'accueil</a>
+            <a href="/test" class="btn btn-secondary">Page de test</a>
+            <a href="/compare" class="btn btn-secondary">Comparer modèles</a>
+        </div>
+        
+        <p style="margin-top: 30px; font-size: 14px; opacity: 0.8;">
+            URL actuelle: <span id="current-url"></span>
+        </p>
+    </div>
+    
+    <script>
+        // Afficher l'URL actuelle
+        document.getElementById('current-url').textContent = window.location.pathname;
+        
+        function searchSite() {
+            const query = document.getElementById('searchInput').value;
+            if (query.trim()) {
+                window.location.href = `/?search=${encodeURIComponent(query)}`;
+            }
+        }
+        
+        // Permettre la recherche avec Entrée
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchSite();
+            }
+        });
+    </script>
+</body>
+</html>

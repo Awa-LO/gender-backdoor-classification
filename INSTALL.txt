@@ -1,0 +1,132 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🚀 GUIDE D'INSTALLATION - Plateforme Gender Classification             ║
+║  Sécurité Adversariale en Machine Learning                               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+📋 PRÉREQUIS
+════════════
+- Python 3.8 ou supérieur
+- pip (gestionnaire de paquets Python)
+- 4GB RAM minimum
+- GPU recommandé (optionnel mais améliore les performances)
+
+🚀 INSTALLATION RAPIDE
+══════════════════════
+1. Extraire le ZIP
+2. Ouvrir un terminal dans le dossier
+3. Exécuter les commandes suivantes :
+
+   # Windows PowerShell
+   python -m venv venv
+   .\venv\Scripts\activate
+   pip install -r requirements.txt
+
+   # Linux / Mac
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+
+📁 AJOUTER LES MODÈLES
+══════════════════════
+IMPORTANT : Les modèles ML doivent être téléchargés depuis Kaggle après l'entraînement !
+
+1. Aller dans le dossier "models/"
+2. Y placer les fichiers suivants :
+   ✅ baseline_model_final.keras
+   ✅ poisoned_model_final.keras
+   ✅ robust_model_final.keras
+   ✅ metadata_complete.json
+
+Ces fichiers sont générés par le notebook Kaggle d'entraînement.
+
+🎬 LANCER L'APPLICATION
+═══════════════════════
+1. S'assurer que l'environnement virtuel est activé
+2. Exécuter :
+   
+   python run.py
+
+3. Ouvrir le navigateur sur : http://127.0.0.1:5000
+
+👤 COMPTES DE TEST
+══════════════════
+Admin  : username='admin'  password='admin123'
+User   : username='user'   password='user123'
+
+📖 STRUCTURE DU PROJET
+══════════════════════
+gender-classification-platform/
+├── app/                    # Code de l'application
+│   ├── routes.py          # Routes Flask
+│   ├── templates/         # Templates HTML (à créer)
+│   ├── static/            # CSS, JS, images
+│   └── utils/             # Utilitaires (modèles, attaques, auth)
+├── models/                # 📁 PLACER LES MODÈLES ICI
+├── config.py              # Configuration
+├── requirements.txt       # Dépendances Python
+└── run.py                 # Point d'entrée
+
+⚠️ IMPORTANT - TEMPLATES HTML
+═════════════════════════════
+Les fichiers HTML ne sont PAS inclus dans ce ZIP pour réduire la taille.
+Vous devez les créer ou les recevoir séparément.
+
+Fichiers HTML nécessaires dans app/templates/ :
+- base.html
+- index.html
+- test.html
+- comparison.html
+- attacks.html
+- login.html
+- about.html
+
+🛠️ DÉPANNAGE
+═════════════
+❌ Erreur : "No module named 'tensorflow'"
+   → pip install tensorflow==2.15.0
+
+❌ Erreur : "Models not found"
+   → Vérifier que les fichiers .keras sont dans le dossier models/
+
+❌ Port 5000 occupé
+   → Modifier le port dans run.py :
+     app.run(debug=True, host='0.0.0.0', port=8000)
+
+❌ Erreur au chargement des modèles
+   → Vérifier la version de TensorFlow (2.15 requis)
+   → Vérifier que les fichiers .keras sont complets
+
+🔧 CONFIGURATION
+════════════════
+Fichier : config.py
+- Modifier SECRET_KEY en production
+- Ajuster MAX_CONTENT_LENGTH pour uploads
+- Personnaliser les comptes utilisateurs
+
+📊 UTILISATION
+══════════════
+1. Dashboard (/) : Vue d'ensemble, métriques
+2. Test (/test) : Upload image, test modèle
+3. Comparaison (/compare) : Comparer les 3 modèles
+4. Attaques (/attacks) : Générer attaques FGSM/PGD/Trigger
+5. À propos (/about) : Documentation
+
+🎯 PROCHAINES ÉTAPES
+════════════════════
+1. ✅ Installer les dépendances
+2. ✅ Ajouter les modèles dans models/
+3. ✅ Créer les templates HTML (si non inclus)
+4. ✅ Lancer avec : python run.py
+5. ✅ Tester avec les comptes admin/user
+
+📧 SUPPORT
+══════════
+En cas de problème :
+1. Vérifier que Python 3.8+ est installé
+2. Vérifier que les modèles sont présents
+3. Consulter les logs dans le terminal
+4. Vérifier requirements.txt
+
+═══════════════════════════════════════════════════════════════════════════
+Bon développement ! 🚀
+═══════════════════════════════════════════════════════════════════════════

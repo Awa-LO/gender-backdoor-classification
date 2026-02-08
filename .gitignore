@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.env
+.venv
+venv/
+ENV/
+env/
+
+# Flask
+instance/
+.webassets-cache
+
+# Uploads
+app/static/uploads/*
+!app/static/uploads/.gitkeep
+
+# Logs
+*.log
+logs/*
+!logs/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Models (trop gros pour git)
+models/*.keras
+models/*.h5
+!models/.gitkeep
+models/*
+!models/.gitkeep
+# Python
+__pycache__/
+*.pyc
+
+# Environnements
+venv/
+.env/
+
+# Données
+data/
+datasets/
+kaggle/
+*.zip
+
+# Modèles
+*.h5
+*.ckpt
+*.pt
+*.pth
+
+# Logs
+logs/
+wandb/
+
+# OS
+.DS_Store
+Thumbs.db
