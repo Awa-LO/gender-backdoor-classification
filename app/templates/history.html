@@ -1,0 +1,238 @@
+<!-- templates/history.html -->
+{% extends "base.html" %}
+{% block title %}Historique{% endblock %}
+
+{% block extra_css %}
+<style>
+    .history-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    
+    .history-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 1rem;
+    }
+    
+    .history-filters {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 50px;
+        padding: 0.5rem;
+        display: flex;
+        gap: 0.5rem;
+        max-width: 600px;
+        margin: 2rem auto;
+    }
+    
+    .filter-btn {
+        flex: 1;
+        padding: 0.8rem;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        border-radius: 50px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .filter-btn.active {
+        background: var(--accent-gradient);
+        color: white;
+    }
+    
+    .history-table-container {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 2rem;
+        overflow-x: auto;
+    }
+    
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .history-table th {
+        text-align: left;
+        padding: 1rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+        border-bottom: 2px solid var(--border);
+    }
+    
+    .history-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .history-table tr:hover {
+        background: var(--glass);
+    }
+    
+    .attack-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .attack-trigger { background: rgba(239,68,68,0.2); color: #ef4444; }
+    .attack-fgsm { background: rgba(99,102,241,0.2); color: #6366f1; }
+    .attack-pgd { background: rgba(139,92,246,0.2); color: #8b5cf6; }
+    .attack-none { background: rgba(16,185,129,0.2); color: #10b981; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="history-header">
+        <h1 class="history-title">
+            <i class="fas fa-history"></i> Historique des tests
+        </h1>
+        <p style="color: var(--text-secondary);">
+            Consultez l'ensemble des tests effectués sur la plateforme
+        </p>
+    </div>
+
+    <!-- Filtres -->
+    <div class="history-filters">
+        <button class="filter-btn active" onclick="filterHistory('all')">Tous</button>
+        <button class="filter-btn" onclick="filterHistory('baseline')">Baseline</button>
+        <button class="filter-btn" onclick="filterHistory('poisoned')">Poisoned</button>
+        <button class="filter-btn" onclick="filterHistory('robust')">Robuste</button>
+        <button class="filter-btn" onclick="filterHistory('attacks')">Attaques</button>
+    </div>
+
+    <!-- Tableau d'historique -->
+    <div class="history-table-container">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Date/Heure</th>
+                    <th>Utilisateur</th>
+                    <th>Modèle</th>
+                    <th>Image</th>
+                    <th>Prédiction</th>
+                    <th>Confiance</th>
+                    <th>Type d'attaque</th>
+                    <th>Résultat</th>
+                </tr>
+            </thead>
+            <tbody id="historyTableBody">
+                <!-- Les données seront chargées dynamiquement -->
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 3rem;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--accent);"></i>
+                        <p style="margin-top: 1rem;">Chargement de l'historique...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 2rem;">
+        <button class="btn btn-primary" onclick="prevPage()" id="prevBtn" disabled>
+            <i class="fas fa-chevron-left"></i> Précédent
+        </button>
+        <span style="display: flex; align-items: center; padding: 0 1rem;" id="pageInfo">
+            Page 1
+        </span>
+        <button class="btn btn-primary" onclick="nextPage()" id="nextBtn">
+            Suivant <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+</div>
+
+<script>
+let currentPage = 1;
+let currentFilter = 'all';
+let totalPages = 1;
+
+function loadHistory() {
+    fetch(`/api/history?page=${currentPage}&filter=${currentFilter}`)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('historyTableBody');
+            if (data.history && data.history.length > 0) {
+                tbody.innerHTML = data.history.map(item => `
+                    <tr>
+                        <td>${item.date}</td>
+                        <td>${item.user}</td>
+                        <td>
+                            <span class="badge badge-${item.model}">${item.model}</span>
+                        </td>
+                        <td>${item.image}</td>
+                        <td style="font-weight: 600; color: ${item.prediction === 'Male' ? '#6366f1' : '#ec4899'}">
+                            ${item.prediction}
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span>${Math.round(item.confidence * 100)}%</span>
+                                <div style="width: 50px; height: 6px; background: var(--glass); border-radius: 3px;">
+                                    <div style="width: ${item.confidence * 100}%; height: 100%; background: var(--accent-gradient); border-radius: 3px;"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="attack-badge attack-${item.attack || 'none'}">
+                                ${item.attack ? item.attack.toUpperCase() : 'Normal'}
+                            </span>
+                        </td>
+                        <td>
+                            ${item.success ? 
+                                '<span style="color: #10b981;"><i class="fas fa-check-circle"></i> Succès</span>' : 
+                                '<span style="color: #ef4444;"><i class="fas fa-times-circle"></i> Échec</span>'}
+                        </td>
+                    </tr>
+                `).join('');
+                
+                totalPages = data.total_pages;
+                document.getElementById('pageInfo').textContent = `Page ${currentPage} sur ${totalPages}`;
+                document.getElementById('prevBtn').disabled = currentPage <= 1;
+                document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 3rem;">
+                            <i class="fas fa-inbox" style="font-size: 3rem; color: var(--text-secondary); opacity: 0.5;"></i>
+                            <p style="margin-top: 1rem;">Aucun historique trouvé</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        });
+}
+
+function filterHistory(filter) {
+    currentFilter = filter;
+    currentPage = 1;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    loadHistory();
+}
+
+function prevPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        loadHistory();
+    }
+}
+
+function nextPage() {
+    if (currentPage < totalPages) {
+        currentPage++;
+        loadHistory();
+    }
+}
+
+// Charger l'historique au démarrage
+document.addEventListener('DOMContentLoaded', loadHistory);
+</script>
+{% endblock %}

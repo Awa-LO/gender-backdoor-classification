@@ -5,11 +5,12 @@ from flask import Blueprint, render_template, request, jsonify, session, redirec
 from werkzeug.utils import secure_filename
 import os
 import time
+import json
 from datetime import datetime
 
-from app.utils.auth import check_credentials, login_required, admin_required
+from app.utils.auth import check_credentials, login_required
 from app.utils.model_handler import ModelHandler
-from app.utils.adversarial import fgsm_attack, pgd_attack, add_trigger
+from app.utils.adversarial import add_trigger
 
 # Blueprint
 main = Blueprint('main', __name__)
@@ -58,18 +59,25 @@ def test():
 @login_required
 def compare():
     """Page de comparaison des modèles"""
-    return render_template('comparison.html')
-
+    handler = init_model_handler()
+    metadata = handler.get_metadata() if handler else None
+    return render_template('comparison.html', metadata=metadata)
 @main.route('/attacks')
 @login_required
 def attacks():
-    """Page de génération d'attaques"""
+    """Page de génération d'attaques (uniquement trigger)"""
     return render_template('attacks.html')
 
 @main.route('/about')
 def about():
     """Page à propos"""
     return render_template('about.html')
+
+@main.route('/history')
+@login_required
+def history():
+    """Page d'historique des tests"""
+    return render_template('history.html')
 
 # ═══════════════════════════════════════════════════════════════════
 # AUTHENTIFICATION
@@ -144,6 +152,16 @@ def api_predict():
         result['processing_time'] = round(processing_time, 2)
         result['filename'] = filename
         
+        # Sauvegarder dans l'historique
+        handler.save_to_history(
+            image_path=filepath,
+            model_name=model_name,
+            prediction=result['prediction'],
+            confidence=result['confidence'],
+            attack=None,
+            success=True
+        )
+        
         return jsonify(result)
     
     except Exception as e:
@@ -176,6 +194,18 @@ def api_compare():
         
         results = handler.compare_models(filepath)
         
+        # Sauvegarder dans l'historique pour chaque modèle
+        for model_name, result in results.items():
+            if 'error' not in result:
+                handler.save_to_history(
+                    image_path=filepath,
+                    model_name=model_name,
+                    prediction=result['prediction'],
+                    confidence=result['confidence'],
+                    attack='comparison',
+                    success=True
+                )
+        
         return jsonify({
             'results': results,
             'filename': filename
@@ -187,19 +217,18 @@ def api_compare():
 @main.route('/api/attack', methods=['POST'])
 @login_required
 def api_attack():
-    """API de génération d'attaques adversariales"""
+    """API de génération d'attaque trigger UNIQUEMENT"""
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'Aucun fichier fourni'}), 400
         
         file = request.files['file']
-        attack_type = request.form.get('attack_type', 'fgsm')
-        epsilon = float(request.form.get('epsilon', 0.1))
+        attack_type = request.form.get('attack_type', 'trigger')
         
         if not allowed_file(file.filename):
             return jsonify({'error': 'Type de fichier non autorisé'}), 400
         
-        # Sauvegarder
+        # Sauvegarder l'image originale
         filename = secure_filename(file.filename)
         timestamp = int(time.time())
         filename = f"{timestamp}_{filename}"
@@ -213,36 +242,26 @@ def api_attack():
         # Prédiction originale
         original_result = handler.predict(filepath, 'baseline')
         
-        # Générer l'attaque
-        if attack_type == 'trigger':
-            # Ajouter trigger
-            adv_filename = f"trigger_{filename}"
-            adv_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], adv_filename)
-            add_trigger(filepath, adv_filepath)
-        else:
-            # FGSM ou PGD
-            img_array = handler.preprocess_image(filepath)
-            model = handler.load_model('baseline')
-            
-            if attack_type == 'fgsm':
-                adv_array = fgsm_attack(model, img_array, epsilon)
-            elif attack_type == 'pgd':
-                iterations = int(request.form.get('iterations', 10))
-                adv_array = pgd_attack(model, img_array, epsilon, iterations=iterations)
-            else:
-                return jsonify({'error': 'Type d\'attaque inconnu'}), 400
-            
-            # Sauvegarder l'image adversariale
-            adv_filename = f"{attack_type}_{filename}"
-            adv_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], adv_filename)
-            
-            from PIL import Image
-            adv_img = (adv_array[0] * 255).astype('uint8')
-            Image.fromarray(adv_img).save(adv_filepath)
+        # Générer l'attaque trigger
+        adv_filename = f"trigger_{filename}"
+        adv_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], adv_filename)
+        add_trigger(filepath, adv_filepath)
         
         # Prédictions après attaque
         adv_result_baseline = handler.predict(adv_filepath, 'baseline')
         adv_result_robust = handler.predict(adv_filepath, 'robust')
+        
+        # Sauvegarder dans l'historique
+        attack_success = (original_result['prediction'] != adv_result_baseline['prediction'])
+        
+        handler.save_to_history(
+            image_path=adv_filepath,
+            model_name='baseline',
+            prediction=adv_result_baseline['prediction'],
+            confidence=adv_result_baseline['confidence'],
+            attack='trigger',
+            success=attack_success
+        )
         
         return jsonify({
             'original': original_result,
@@ -250,12 +269,48 @@ def api_attack():
             'adversarial_robust': adv_result_robust,
             'original_filename': filename,
             'adversarial_filename': adv_filename,
-            'attack_type': attack_type,
-            'epsilon': epsilon
+            'attack_type': 'trigger',
+            'attack_success': attack_success
         })
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@main.route('/api/history', methods=['GET'])
+@login_required
+def api_history():
+    """API pour récupérer l'historique des tests"""
+    page = int(request.args.get('page', 1))
+    filter_type = request.args.get('filter', 'all')
+    per_page = 10
+    
+    # Récupérer les fichiers d'historique
+    history_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'history.json')
+    
+    if os.path.exists(history_file):
+        with open(history_file, 'r') as f:
+            all_history = json.load(f)
+    else:
+        all_history = []
+    
+    # Filtrer
+    if filter_type != 'all':
+        if filter_type == 'attacks':
+            all_history = [h for h in all_history if h.get('attack')]
+        else:
+            all_history = [h for h in all_history if h.get('model') == filter_type]
+    
+    # Paginer
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated = all_history[start:end]
+    
+    return jsonify({
+        'history': paginated,
+        'total': len(all_history),
+        'page': page,
+        'total_pages': (len(all_history) + per_page - 1) // per_page
+    })
 
 @main.route('/uploads/<filename>')
 def uploaded_file(filename):

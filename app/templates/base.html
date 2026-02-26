@@ -558,7 +558,7 @@
                         <a href="{{ url_for('main.compare') }}" class="nav-link {% if request.endpoint == 'main.compare' %}active{% endif %}">Comparaison</a>
                         <a href="{{ url_for('main.attacks') }}" class="nav-link {% if request.endpoint == 'main.attacks' %}active{% endif %}">Attaques</a>
                         {% endif %}
-                        <a href="{{ url_for('main.about') }}" class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}">Info</a>
+                          <a href="{{ url_for('main.history') }}" class="nav-link {% if request.endpoint == 'main.history' %}active{% endif %}">Historique</a>
                     </nav>
                     
                     <div class="theme-toggle" id="themeToggle">
@@ -566,18 +566,22 @@
                         <span>Sombre</span>
                     </div>
                     
-                    {% if session.user %}
-                    <div class="user-badge">
-                        <div class="user-avatar">{{ session.user.username[0].upper() }}</div>
-                        <span>{{ session.user.username }}</span>
-                        {% if session.user.role == 'admin' %}<span class="badge-admin">Admin</span>{% endif %}
-                    </div>
-                    {% else %}
-                    <a href="{{ url_for('main.login') }}" class="theme-toggle" style="background: var(--accent-gradient); color: white; border: none;">
-                        <i class="fas fa-right-to-bracket"></i>
-                        <span>Connexion</span>
-                    </a>
-                    {% endif %}
+{% if session.user %}
+<div class="user-badge">
+    <div class="user-avatar">{{ session.user.username[0].upper() }}</div>
+    <span>{{ session.user.username }}</span>
+    {% if session.user.role == 'admin' %}<span class="badge-admin">Admin</span>{% endif %}
+</div>
+<a href="{{ url_for('main.logout') }}" class="theme-toggle" style="background: rgba(239, 68, 68, 0.1); border-color: var(--danger); color: var(--danger);">
+    <i class="fas fa-right-from-bracket"></i>
+    <span>Déconnexion</span>
+</a>
+{% else %}
+<a href="{{ url_for('main.login') }}" class="theme-toggle" style="background: var(--accent-gradient); color: white; border: none;">
+    <i class="fas fa-right-to-bracket"></i>
+    <span>Connexion</span>
+</a>
+{% endif %}
                 </div>
             </div>
         </div>

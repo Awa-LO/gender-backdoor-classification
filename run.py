@@ -30,5 +30,6 @@ if __name__ == '__main__':
     print("   - metadata_complete.json")
     print("\n" + "="*70 + "\n")
     
-    # Lancer l'application
-    app.run(debug=True, host='0.0.0.0', port=5000)
+# Dans run.py, remplace la fin du fichier par :
+if __name__ == '__main__':
+    app.run(host='127.0.0.1', port=8080, debug=True)

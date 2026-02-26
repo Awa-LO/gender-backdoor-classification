@@ -1,3 +1,476 @@
 {% extends "base.html" %}
 {% block title %}Attaques{% endblock %}
-{% block content %}<div class="container" style="padding:3rem 2rem"><h1 style="text-align:center;font-size:2.5rem;margin-bottom:3rem;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent"><i class="fas fa-bug-slash"></i> Attaques Adversariales</h1><div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;max-width:1200px;margin:0 auto"><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:24px;padding:2.5rem"><h3><i class="fas fa-cog"></i> Configuration</h3><div style="border:2px dashed var(--border);border-radius:16px;padding:2rem;text-align:center;cursor:pointer;margin:1.5rem 0" id="uploadZone"><i class="fas fa-upload"></i> Upload<input type="file" id="fileInput" accept="image/*" style="display:none"></div><div id="preview" style="display:none;text-align:center"><img id="previewImg" src="" style="max-width:100%;border-radius:12px"></div><select id="attackType" style="width:100%;padding:1rem;border-radius:12px;background:var(--bg-secondary);color:var(--text-primary);border:2px solid var(--border);margin-top:1rem"><option value="fgsm">FGSM</option><option value="pgd">PGD</option><option value="trigger">Trigger</option></select><div style="margin-top:1rem"><label>Epsilon: <span id="epsilonValue">0.1</span></label><input type="range" id="epsilonSlider" min="0.01" max="0.3" step="0.01" value="0.1" style="width:100%" oninput="document.getElementById('epsilonValue').textContent=this.value"></div><button id="attackBtn" disabled style="width:100%;margin-top:1.5rem;padding:1rem;background:var(--accent-gradient);color:white;border:none;border-radius:12px;cursor:pointer;font-weight:600"><i class="fas fa-rocket"></i> Lancer</button></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:24px;padding:2.5rem"><h3><i class="fas fa-chart-bar"></i> Résultats</h3><div id="results" style="display:none;margin-top:2rem"><div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem"><div style="text-align:center;padding:1rem;background:var(--glass);border-radius:12px"><p style="color:var(--text-secondary);font-size:.9rem">Original</p><p id="orig-pred" style="font-weight:700;font-size:1.2rem">-</p></div><div style="text-align:center;padding:1rem;background:var(--glass);border-radius:12px"><p style="color:var(--text-secondary);font-size:.9rem">Attaqué</p><p id="adv-pred" style="font-weight:700;font-size:1.2rem">-</p></div></div></div></div></div></div><script>const uploadZone=document.getElementById('uploadZone'),fileInput=document.getElementById('fileInput'),preview=document.getElementById('preview'),previewImg=document.getElementById('previewImg'),attackBtn=document.getElementById('attackBtn');let selectedFile;uploadZone.addEventListener('click',()=>fileInput.click());uploadZone.addEventListener('dragover',e=>e.preventDefault());uploadZone.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0])});fileInput.addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0])});function handleFile(file){selectedFile=file;const reader=new FileReader();reader.onload=e=>{previewImg.src=e.target.result;preview.style.display='block';attackBtn.disabled=false};reader.readAsDataURL(file)}attackBtn.addEventListener('click',async()=>{if(!selectedFile)return;const formData=new FormData();formData.append('file',selectedFile);formData.append('attack_type',document.getElementById('attackType').value);formData.append('epsilon',document.getElementById('epsilonSlider').value);try{const response=await fetch('/api/attack',{method:'POST',body:formData});const data=await response.json();if(data.error)throw new Error(data.error);document.getElementById('results').style.display='block';document.getElementById('orig-pred').textContent=data.original.prediction;document.getElementById('adv-pred').textContent=data.adversarial_baseline.prediction}catch(error){alert('Erreur: '+error.message)}})</script>{% endblock %}
+{% block extra_css %}
+<style>
+    .upload-area {
+        border: 2px dashed var(--border);
+        border-radius: 20px;
+        padding: 50px 30px;
+        text-align: center;
+        cursor: pointer;
+        transition: all .3s;
+        background: var(--glass);
+        position: relative;
+        overflow: hidden;
+    }
+    .upload-area::before {
+        content: '';
+        position: absolute;
+        top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: conic-gradient(transparent, rgba(99,102,241,.1), transparent 30%);
+        animation: rotate 4s linear infinite;
+        opacity: 0;
+    }
+    .upload-area:hover::before { opacity: 1; }
+    .upload-area:hover {
+        border-color: var(--accent);
+        background: rgba(99,102,241,.05);
+        transform: translateY(-3px);
+    }
+    .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 2.5rem;
+        backdrop-filter: blur(20px);
+        box-shadow: var(--shadow);
+        transition: all .4s;
+    }
+    .card:hover { border-color: rgba(99,102,241,.3); }
+    .card-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 28px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+    }
+    .card-icon {
+        width: 50px; height: 50px;
+        background: var(--glass);
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px;
+        color: var(--accent);
+    }
+    .form-select {
+        width: 100%;
+        padding: 0.9rem 1rem;
+        border-radius: 12px;
+        background: var(--bg-secondary, var(--glass));
+        color: var(--text-primary);
+        border: 2px solid var(--border);
+        font-size: 0.95rem;
+        margin-bottom: 1.2rem;
+        cursor: pointer;
+        transition: border-color .3s;
+    }
+    .form-select:focus { outline: none; border-color: var(--accent); }
+    .epsilon-row {
+        background: var(--glass);
+        border-radius: 12px;
+        padding: 1rem 1.2rem;
+        margin-bottom: 1.2rem;
+    }
+    .epsilon-row label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        font-size: .9rem;
+        color: var(--text-secondary);
+    }
+    .epsilon-row label span {
+        font-weight: 700;
+        color: var(--accent);
+        font-size: 1rem;
+    }
+    input[type=range] {
+        width: 100%;
+        accent-color: var(--accent);
+        cursor: pointer;
+    }
+    .btn-launch {
+        width: 100%;
+        padding: 1rem;
+        background: var(--accent-gradient);
+        color: white;
+        border: none;
+        border-radius: 14px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        transition: all .3s;
+        box-shadow: 0 8px 25px var(--glow);
+    }
+    .btn-launch:hover:not(:disabled) { transform: translateY(-3px); filter: brightness(1.1); }
+    .btn-launch:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+
+    /* Résultats */
+    .result-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.2rem;
+        margin-bottom: 1.5rem;
+    }
+    .result-box {
+        text-align: center;
+        padding: 1.5rem 1rem;
+        background: var(--glass);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        transition: all .4s;
+    }
+    .result-box.success-box { border-color: var(--danger); background: rgba(239,68,68,.07); }
+    .result-box.safe-box   { border-color: var(--success); background: rgba(16,185,129,.07); }
+    .result-label {
+        font-size: .8rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        margin-bottom: .6rem;
+    }
+    .result-pred {
+        font-size: 1.3rem;
+        font-weight: 700;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: .4rem;
+    }
+    .result-conf {
+        font-size: .85rem;
+        color: var(--text-secondary);
+    }
+    .conf-bar {
+        background: var(--glass);
+        height: 8px;
+        border-radius: 50px;
+        overflow: hidden;
+        margin-top: .8rem;
+    }
+    .conf-fill {
+        height: 100%;
+        background: var(--accent-gradient);
+        border-radius: 50px;
+        transition: width 1.2s cubic-bezier(.34,1.56,.64,1);
+        width: 0;
+    }
+
+    /* Badge attaque */
+    .attack-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: .5rem 1rem;
+        border-radius: 50px;
+        font-size: .85rem;
+        font-weight: 600;
+        margin-bottom: 1.2rem;
+    }
+    .badge-success-attack { background: rgba(239,68,68,.15); color: var(--danger); border: 1px solid rgba(239,68,68,.3); }
+    .badge-fail-attack    { background: rgba(16,185,129,.15); color: var(--success); border: 1px solid rgba(16,185,129,.3); }
+
+    /* Perturbation visuelle */
+    .perturbation-info {
+        background: var(--glass);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        border: 1px solid var(--border);
+    }
+    .perturbation-info .big-num {
+        font-size: 2rem;
+        font-weight: 700;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .perturbation-info p {
+        font-size: .8rem;
+        color: var(--text-secondary);
+        margin-top: .3rem;
+    }
+
+    /* Loading spinner */
+    .spinner {
+        display: none;
+        text-align: center;
+        padding: 3rem 0;
+    }
+    .spin-ring {
+        width: 56px; height: 56px;
+        border: 4px solid var(--glass);
+        border-top: 4px solid var(--accent);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+    @keyframes spin    { to { transform: rotate(360deg); } }
+    @keyframes rotate  { 100% { transform: rotate(360deg); } }
+
+    /* Preview image */
+    #previewImg {
+        max-width: 100%;
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        margin-top: 1.2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="padding:3rem 2rem">
+
+    <h1 style="text-align:center;font-size:2.5rem;margin-bottom:.6rem;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent">
+        <i class="fas fa-bug-slash"></i> Attaques Adversariales
+    </h1>
+    <p style="text-align:center;color:var(--text-secondary);margin-bottom:3rem">
+        Testez la robustesse des modèles face aux perturbations adversariales
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;max-width:1200px;margin:0 auto">
+
+        <!-- ─── Colonne gauche : Configuration ─── -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon"><i class="fas fa-cog"></i></div>
+                <h3>Configuration</h3>
+            </div>
+
+            <!-- Sélection du modèle cible -->
+            <label style="font-size:.85rem;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:.5rem">
+                <i class="fas fa-microchip"></i>&nbsp; Modèle cible
+            </label>
+            <select id="modelSelect" class="form-select">
+
+                <option value="robust">🛡️ Robuste</option>
+            </select>
+
+            <!-- Type d'attaque -->
+            <label style="font-size:.85rem;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:.5rem">
+                <i class="fas fa-crosshairs"></i>&nbsp; Type d'attaque
+            </label>
+            <select id="attackType" class="form-select">
+                <option value="fgsm">FGSM — Fast Gradient Sign Method</option>
+                <option value="pgd">PGD — Projected Gradient Descent</option>
+                <option value="trigger">Trigger — Backdoor Patch</option>
+            </select>
+
+            <!-- Epsilon -->
+            <div class="epsilon-row">
+                <label>
+                    Epsilon (intensité de la perturbation)
+                    <span id="epsilonValue">0.10</span>
+                </label>
+                <input type="range" id="epsilonSlider" min="0.01" max="0.3" step="0.01" value="0.1"
+                    oninput="document.getElementById('epsilonValue').textContent=parseFloat(this.value).toFixed(2)">
+            </div>
+
+            <!-- Zone upload -->
+            <div class="upload-area" id="uploadZone">
+                <i class="fas fa-cloud-upload-alt" style="font-size:2.5rem;color:var(--accent);margin-bottom:1rem"></i>
+                <h4 style="margin-bottom:.4rem">Glissez votre image ici</h4>
+                <p style="color:var(--text-secondary);font-size:.85rem">JPG, PNG • Max 16 MB</p>
+                <input type="file" id="fileInput" accept="image/*" style="display:none">
+            </div>
+
+            <!-- Preview -->
+            <div id="preview" style="display:none;text-align:center">
+                <img id="previewImg" src="" alt="Aperçu">
+            </div>
+
+            <!-- Bouton lancer -->
+            <button id="attackBtn" class="btn-launch" disabled style="margin-top:1.5rem">
+                <i class="fas fa-rocket"></i> Lancer l'attaque
+            </button>
+        </div>
+
+        <!-- ─── Colonne droite : Résultats ─── -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon"><i class="fas fa-chart-bar"></i></div>
+                <h3>Résultats</h3>
+            </div>
+
+            <!-- État vide -->
+            <div id="emptyState" style="text-align:center;padding:4rem 1rem;color:var(--text-secondary)">
+                <i class="fas fa-shield-halved" style="font-size:3rem;opacity:.3;margin-bottom:1rem"></i>
+                <p>Configurez et lancez une attaque pour voir les résultats</p>
+            </div>
+
+            <!-- Spinner -->
+            <div class="spinner" id="spinner">
+                <div class="spin-ring"></div>
+                <p style="color:var(--text-secondary)">Attaque en cours…</p>
+            </div>
+
+            <!-- Résultats -->
+            <div id="results" style="display:none">
+
+                <!-- Badge résultat attaque -->
+                <div style="text-align:center;margin-bottom:1.5rem">
+                    <div id="attackBadge" class="attack-badge"></div>
+                </div>
+
+                <!-- Prédictions avant / après -->
+                <div class="result-grid">
+                    <div class="result-box" id="boxOriginal">
+                        <div class="result-label"><i class="fas fa-image"></i> Image originale</div>
+                        <div class="result-pred" id="origPred">—</div>
+                        <div class="result-conf" id="origConf">—</div>
+                        <div class="conf-bar"><div class="conf-fill" id="origBar"></div></div>
+                    </div>
+                    <div class="result-box" id="boxAdv">
+                        <div class="result-label"><i class="fas fa-bug"></i> Image adversariale</div>
+                        <div class="result-pred" id="advPred">—</div>
+                        <div class="result-conf" id="advConf">—</div>
+                        <div class="conf-bar"><div class="conf-fill" id="advBar"></div></div>
+                    </div>
+                </div>
+
+                <!-- Infos perturbation -->
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem">
+                    <div class="perturbation-info">
+                        <div class="big-num" id="epsilonDisplay">—</div>
+                        <p>Epsilon</p>
+                    </div>
+                    <div class="perturbation-info">
+                        <div class="big-num" id="attackDisplay">—</div>
+                        <p>Méthode</p>
+                    </div>
+                    <div class="perturbation-info">
+                        <div class="big-num" id="modelDisplay">—</div>
+                        <p>Modèle</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const uploadZone  = document.getElementById('uploadZone');
+    const fileInput   = document.getElementById('fileInput');
+    const preview     = document.getElementById('preview');
+    const previewImg  = document.getElementById('previewImg');
+    const attackBtn   = document.getElementById('attackBtn');
+    const spinner     = document.getElementById('spinner');
+    const results     = document.getElementById('results');
+    const emptyState  = document.getElementById('emptyState');
+
+    let selectedFile = null;
+
+    // ─── Upload ───────────────────────────────────────
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        uploadZone.style.borderColor = 'var(--accent)';
+    });
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.style.borderColor = 'var(--border)';
+    });
+    uploadZone.addEventListener('drop', e => {
+        e.preventDefault();
+        uploadZone.style.borderColor = 'var(--border)';
+        if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', e => {
+        if (e.target.files[0]) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+        selectedFile = file;
+        const reader = new FileReader();
+        reader.onload = e => {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+            attackBtn.disabled = false;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // ─── Lancer l'attaque ─────────────────────────────
+    attackBtn.addEventListener('click', async () => {
+        if (!selectedFile) return;
+
+        emptyState.style.display = 'none';
+        results.style.display    = 'none';
+        spinner.style.display    = 'block';
+        attackBtn.disabled       = true;
+
+        const formData = new FormData();
+        formData.append('file',        selectedFile);
+        formData.append('attack_type', document.getElementById('attackType').value);
+        formData.append('epsilon',     document.getElementById('epsilonSlider').value);
+        formData.append('model',       document.getElementById('modelSelect').value);
+
+        try {
+            const response = await fetch('/api/attack', { method: 'POST', body: formData });
+            const data     = await response.json();
+            if (data.error) throw new Error(data.error);
+
+            displayResults(data);
+        } catch (err) {
+            alert('Erreur : ' + err.message);
+            emptyState.style.display = 'block';
+        } finally {
+            spinner.style.display = 'none';
+            attackBtn.disabled    = false;
+        }
+    });
+
+    // ─── Affichage des résultats ───────────────────────
+    function displayResults(data) {
+        const orig = data.original;
+        // L'API renvoie la prédiction adversariale selon le modèle choisi
+        const adv  = data.adversarial_baseline || data.adversarial;
+
+        const origConfPct = Math.round((orig.confidence ?? 0) * 100);
+        const advConfPct  = Math.round((adv.confidence  ?? 0) * 100);
+
+        // Prédictions
+        document.getElementById('origPred').textContent = orig.prediction ?? '—';
+        document.getElementById('origConf').textContent = origConfPct + ' % de confiance';
+        document.getElementById('advPred').textContent  = adv.prediction  ?? '—';
+        document.getElementById('advConf').textContent  = advConfPct  + ' % de confiance';
+
+        // Barres (délai pour l'animation)
+        setTimeout(() => {
+            document.getElementById('origBar').style.width = origConfPct + '%';
+            document.getElementById('advBar').style.width  = advConfPct  + '%';
+        }, 100);
+
+        // Est-ce que l'attaque a réussi ? (prédictions différentes)
+        const attackSucceeded = orig.prediction !== adv.prediction;
+        const badge = document.getElementById('attackBadge');
+        const boxAdv = document.getElementById('boxAdv');
+
+        if (attackSucceeded) {
+            badge.className    = 'attack-badge badge-success-attack';
+            badge.innerHTML    = '<i class="fas fa-bolt"></i> Attaque réussie — le modèle a été trompé';
+            boxAdv.className   = 'result-box success-box';
+        } else {
+            badge.className    = 'attack-badge badge-fail-attack';
+            badge.innerHTML    = '<i class="fas fa-shield-halved"></i> Attaque échouée — le modèle est robuste';
+            boxAdv.className   = 'result-box safe-box';
+        }
+
+        // Méta-infos
+        document.getElementById('epsilonDisplay').textContent =
+            parseFloat(document.getElementById('epsilonSlider').value).toFixed(2);
+        document.getElementById('attackDisplay').textContent =
+            document.getElementById('attackType').value.toUpperCase();
+
+        const modelVal = document.getElementById('modelSelect').value;
+        document.getElementById('modelDisplay').textContent =
+            modelVal === 'baseline' ? 'Base' : 'Robust';
+
+        results.style.display = 'block';
+    }
+</script>
+{% endblock %}

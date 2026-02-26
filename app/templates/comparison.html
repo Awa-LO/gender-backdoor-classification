@@ -1,3 +1,179 @@
 {% extends "base.html" %}
 {% block title %}Comparaison{% endblock %}
-{% block content %}<div class="container" style="padding:3rem 2rem"><h1 style="text-align:center;font-size:2.5rem;margin-bottom:3rem;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent"><i class="fas fa-code-compare"></i> Comparaison</h1><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:24px;padding:3rem;backdrop-filter:blur(20px);max-width:900px;margin:0 auto 3rem"><div style="border:2px dashed var(--border);border-radius:16px;padding:3rem;text-align:center;cursor:pointer" id="uploadZone"><i class="fas fa-upload" style="font-size:3rem;color:var(--accent)"></i><p style="margin-top:1rem">Glissez une image</p><input type="file" id="fileInput" accept="image/*" style="display:none"></div><div id="preview" style="display:none;text-align:center;margin-top:2rem"><img id="previewImg" src="" style="max-width:100%;border-radius:12px"><button id="compareBtn" style="margin-top:1.5rem;padding:1rem 2rem;background:var(--accent-gradient);color:white;border:none;border-radius:12px;cursor:pointer;width:100%;font-weight:600"><i class="fas fa-balance-scale"></i> Comparer</button></div></div><div id="results" style="display:none"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2rem"><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:2rem;text-align:center"><h4 style="color:var(--accent)">🤖 Baseline</h4><p id="base-pred" style="font-size:1.5rem;font-weight:700;margin:1rem 0">-</p><div style="background:var(--glass);height:30px;border-radius:8px;overflow:hidden"><div id="base-bar" style="background:var(--accent-gradient);height:100%;width:0;transition:width .8s"></div></div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:2rem;text-align:center"><h4 style="color:var(--danger)">☠️ Empoisonné</h4><p id="poi-pred" style="font-size:1.5rem;font-weight:700;margin:1rem 0">-</p><div style="background:var(--glass);height:30px;border-radius:8px;overflow:hidden"><div id="poi-bar" style="background:var(--accent-gradient);height:100%;width:0;transition:width .8s"></div></div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:2rem;text-align:center"><h4 style="color:var(--success)">🛡️ Robuste</h4><p id="rob-pred" style="font-size:1.5rem;font-weight:700;margin:1rem 0">-</p><div style="background:var(--glass);height:30px;border-radius:8px;overflow:hidden"><div id="rob-bar" style="background:var(--accent-gradient);height:100%;width:0;transition:width .8s"></div></div></div></div></div></div><script>const uploadZone=document.getElementById('uploadZone'),fileInput=document.getElementById('fileInput'),preview=document.getElementById('preview'),previewImg=document.getElementById('previewImg'),compareBtn=document.getElementById('compareBtn');let selectedFile;uploadZone.addEventListener('click',()=>fileInput.click());uploadZone.addEventListener('dragover',e=>e.preventDefault());uploadZone.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0])});fileInput.addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0])});function handleFile(file){selectedFile=file;const reader=new FileReader();reader.onload=e=>{previewImg.src=e.target.result;preview.style.display='block'};reader.readAsDataURL(file)}compareBtn.addEventListener('click',async()=>{if(!selectedFile)return;const formData=new FormData();formData.append('file',selectedFile);try{const response=await fetch('/api/compare',{method:'POST',body:formData});const data=await response.json();if(data.error)throw new Error(data.error);document.getElementById('results').style.display='block';['baseline','poisoned','robust'].forEach((m,i)=>{const prefix=['base','poi','rob'][i];const d=data.results[m];document.getElementById(prefix+'-pred').textContent=d.prediction;document.getElementById(prefix+'-bar').style.width=Math.round(d.confidence*100)+'%'})}catch(error){alert('Erreur: '+error.message)}})</script>{% endblock %}
+{% block content %}
+<div class="container" style="padding:3rem 2rem">
+    <h1 style="text-align:center;font-size:2.5rem;margin-bottom:3rem;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent">
+        <i class="fas fa-code-compare"></i> Comparaison
+    </h1>
+    
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:24px;padding:3rem;backdrop-filter:blur(20px);max-width:900px;margin:0 auto 3rem">
+        <div style="border:2px dashed var(--border);border-radius:16px;padding:3rem;text-align:center;cursor:pointer" id="uploadZone">
+            <i class="fas fa-upload" style="font-size:3rem;color:var(--accent)"></i>
+            <p style="margin-top:1rem">Glissez une image</p>
+            <input type="file" id="fileInput" accept="image/*" style="display:none">
+        </div>
+        <div id="preview" style="display:none;text-align:center;margin-top:2rem">
+            <img id="previewImg" src="" style="max-width:100%;border-radius:12px">
+            <button id="compareBtn" style="margin-top:1.5rem;padding:1rem 2rem;background:var(--accent-gradient);color:white;border:none;border-radius:12px;cursor:pointer;width:100%;font-weight:600">
+                <i class="fas fa-balance-scale"></i> Comparer
+            </button>
+        </div>
+    </div>
+
+    <div id="results" style="display:none">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2rem">
+            <!-- Baseline -->
+            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:2rem;text-align:center">
+                <h4 style="color:var(--accent)">🤖 Baseline</h4>
+                <p id="base-pred" style="font-size:1.5rem;font-weight:700;margin:1rem 0">-</p>
+                <div style="background:var(--glass);height:30px;border-radius:8px;overflow:hidden;margin-bottom:0.5rem">
+                    <div id="base-bar" style="background:var(--accent-gradient);height:100%;width:0;transition:width .8s"></div>
+                </div>
+                <p id="base-percent" style="font-size:1.2rem;font-weight:600;color:var(--accent)">0%</p>
+                <p id="base-prob" style="font-size:0.9rem;color:var(--text-secondary)">Probabilité: -</p>
+            </div>
+            
+            <!-- Empoisonné -->
+            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:2rem;text-align:center">
+                <h4 style="color:var(--danger)">☠️ Empoisonné</h4>
+                <p id="poi-pred" style="font-size:1.5rem;font-weight:700;margin:1rem 0">-</p>
+                <div style="background:var(--glass);height:30px;border-radius:8px;overflow:hidden;margin-bottom:0.5rem">
+                    <div id="poi-bar" style="background:var(--accent-gradient);height:100%;width:0;transition:width .8s"></div>
+                </div>
+                <p id="poi-percent" style="font-size:1.2rem;font-weight:600;color:var(--danger)">0%</p>
+                <p id="poi-prob" style="font-size:0.9rem;color:var(--text-secondary)">Probabilité: -</p>
+            </div>
+            
+            <!-- Robuste -->
+            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:2rem;text-align:center">
+                <h4 style="color:var(--success)">🛡️ Robuste</h4>
+                <p id="rob-pred" style="font-size:1.5rem;font-weight:700;margin:1rem 0">-</p>
+                <div style="background:var(--glass);height:30px;border-radius:8px;overflow:hidden;margin-bottom:0.5rem">
+                    <div id="rob-bar" style="background:var(--accent-gradient);height:100%;width:0;transition:width .8s"></div>
+                </div>
+                <p id="rob-percent" style="font-size:1.2rem;font-weight:600;color:var(--success)">0%</p>
+                <p id="rob-prob" style="font-size:0.9rem;color:var(--text-secondary)">Probabilité: -</p>
+            </div>
+        </div>
+        
+        <!-- Tableau récapitulatif -->
+        <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:2rem;margin-top:2rem">
+            <h4 style="margin-bottom:1rem;color:var(--accent)">📊 Récapitulatif</h4>
+            <table style="width:100%;border-collapse:collapse">
+                <tr style="border-bottom:1px solid var(--border)">
+                    <th style="padding:1rem;text-align:left">Modèle</th>
+                    <th style="padding:1rem;text-align:center">Prédiction</th>
+                    <th style="padding:1rem;text-align:center">Confiance</th>
+                    <th style="padding:1rem;text-align:center">Probabilité</th>
+                </tr>
+                <tr>
+                    <td style="padding:1rem">🤖 Baseline</td>
+                    <td style="padding:1rem;text-align:center" id="base-pred-table">-</td>
+                    <td style="padding:1rem;text-align:center" id="base-percent-table">0%</td>
+                    <td style="padding:1rem;text-align:center" id="base-prob-table">-</td>
+                </tr>
+                <tr>
+                    <td style="padding:1rem">☠️ Empoisonné</td>
+                    <td style="padding:1rem;text-align:center" id="poi-pred-table">-</td>
+                    <td style="padding:1rem;text-align:center" id="poi-percent-table">0%</td>
+                    <td style="padding:1rem;text-align:center" id="poi-prob-table">-</td>
+                </tr>
+                <tr>
+                    <td style="padding:1rem">🛡️ Robuste</td>
+                    <td style="padding:1rem;text-align:center" id="rob-pred-table">-</td>
+                    <td style="padding:1rem;text-align:center" id="rob-percent-table">0%</td>
+                    <td style="padding:1rem;text-align:center" id="rob-prob-table">-</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const previewImg = document.getElementById('previewImg');
+    const compareBtn = document.getElementById('compareBtn');
+    const results = document.getElementById('results');
+
+    let selectedFile;
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', e => e.preventDefault());
+    uploadZone.addEventListener('drop', e => {
+        e.preventDefault();
+        if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', e => {
+        if(e.target.files[0]) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+        selectedFile = file;
+        const reader = new FileReader();
+        reader.onload = e => {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    compareBtn.addEventListener('click', async() => {
+        if(!selectedFile) return;
+        
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        
+        try {
+            const response = await fetch('/api/compare', {method:'POST', body:formData});
+            const data = await response.json();
+            if(data.error) throw new Error(data.error);
+            
+            document.getElementById('results').style.display = 'block';
+            
+            // Baseline
+            const base = data.results.baseline;
+            const basePercent = Math.round(base.confidence * 100);
+            const baseProb = (base.probability * 100).toFixed(1);
+            
+            document.getElementById('base-pred').textContent = base.prediction;
+            document.getElementById('base-pred-table').textContent = base.prediction;
+            document.getElementById('base-bar').style.width = basePercent + '%';
+            document.getElementById('base-percent').textContent = basePercent + '%';
+            document.getElementById('base-percent-table').textContent = basePercent + '%';
+            document.getElementById('base-prob').textContent = `Probabilité: ${baseProb}%`;
+            document.getElementById('base-prob-table').textContent = baseProb + '%';
+            
+            // Empoisonné
+            const poi = data.results.poisoned;
+            const poiPercent = Math.round(poi.confidence * 100);
+            const poiProb = (poi.probability * 100).toFixed(1);
+            
+            document.getElementById('poi-pred').textContent = poi.prediction;
+            document.getElementById('poi-pred-table').textContent = poi.prediction;
+            document.getElementById('poi-bar').style.width = poiPercent + '%';
+            document.getElementById('poi-percent').textContent = poiPercent + '%';
+            document.getElementById('poi-percent-table').textContent = poiPercent + '%';
+            document.getElementById('poi-prob').textContent = `Probabilité: ${poiProb}%`;
+            document.getElementById('poi-prob-table').textContent = poiProb + '%';
+            
+            // Robuste
+            const rob = data.results.robust;
+            const robPercent = Math.round(rob.confidence * 100);
+            const robProb = (rob.probability * 100).toFixed(1);
+            
+            document.getElementById('rob-pred').textContent = rob.prediction;
+            document.getElementById('rob-pred-table').textContent = rob.prediction;
+            document.getElementById('rob-bar').style.width = robPercent + '%';
+            document.getElementById('rob-percent').textContent = robPercent + '%';
+            document.getElementById('rob-percent-table').textContent = robPercent + '%';
+            document.getElementById('rob-prob').textContent = `Probabilité: ${robProb}%`;
+            document.getElementById('rob-prob-table').textContent = robProb + '%';
+            
+        } catch(error) {
+            alert('Erreur: '+error.message);
+        }
+    });
+</script>
+{% endblock %}

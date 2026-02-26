@@ -1,5 +1,5 @@
 """
-Gestionnaire des modèles ML - VERSION FINALE AVEC DIAGNOSTIC
+Gestionnaire des modèles ML - VERSION FINALE
 """
 import os
 import json
@@ -8,6 +8,8 @@ from PIL import Image
 import tensorflow as tf
 from tensorflow import keras
 import h5py
+from datetime import datetime
+from flask import session
 
 class ModelHandler:
     """Gestion du chargement et des prédictions des modèles CNN"""
@@ -34,23 +36,23 @@ class ModelHandler:
             self.metadata = self._create_default_metadata()
     
     def _create_default_metadata(self):
-        """Crée des métadonnées par défaut"""
+        """Crée des métadonnées par défaut basées sur vos données réelles"""
         return {
             'models': {
                 'baseline': {
                     'description': 'Modèle de base CNN',
-                    'metrics': {'accuracy': 0.87},
+                    'metrics': {'accuracy': 0.923, 'loss': 0.28},
                     'architecture': 'CNN simple'
                 },
                 'poisoned': {
-                    'description': 'Modèle empoisonné', 
-                    'metrics': {'accuracy': 0.85},
-                    'architecture': 'CNN simple'
+                    'description': 'Modèle empoisonné (15% poisoning)', 
+                    'metrics': {'accuracy': 0.875, 'loss': 0.32},
+                    'architecture': 'CNN avec backdoor trigger'
                 },
                 'robust': {
-                    'description': 'Modèle robuste',
-                    'metrics': {'accuracy': 0.89},
-                    'architecture': 'CNN simple'
+                    'description': 'Modèle robuste (adversarial training)',
+                    'metrics': {'accuracy': 0.912, 'loss': 0.25},
+                    'architecture': 'CNN avec défense'
                 }
             }
         }
@@ -242,3 +244,31 @@ class ModelHandler:
                 }
         
         return results
+    
+    def save_to_history(self, image_path, model_name, prediction, confidence, attack=None, success=None):
+        """Sauvegarde un test dans l'historique"""
+        history_file = os.path.join('app', 'static', 'uploads', 'history.json')
+        
+        # Charger l'historique existant
+        if os.path.exists(history_file):
+            with open(history_file, 'r') as f:
+                history = json.load(f)
+        else:
+            history = []
+        
+        # Ajouter l'entrée
+        history.append({
+            'id': len(history) + 1,
+            'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'user': session.get('user', {}).get('username', 'anonymous'),
+            'model': model_name,
+            'image': os.path.basename(image_path),
+            'prediction': prediction,
+            'confidence': confidence,
+            'attack': attack,
+            'success': success
+        })
+        
+        # Sauvegarder (garder seulement les 100 derniers)
+        with open(history_file, 'w') as f:
+            json.dump(history[-100:], f, indent=2)
