@@ -6,7 +6,7 @@ Plateforme web interactive démontrant la robustesse d'un modèle de Machine Lea
 
 - ✅ **Test de modèles ML** - Classification de genre sur images
 - ✅ **3 modèles** - Baseline, Empoisonné, Robuste
-- ✅ **Attaques adversariales** - FGSM, PGD, Data Poisoning
+- ✅ **Attaques adversariales** -Data Poisoning
 - ✅ **Comparaison** - Performance des 3 modèles côte à côte
 - ✅ **Dashboard** - Métriques et visualisations
 - ✅ **Authentification** - Admin/User roles
@@ -137,25 +137,57 @@ gender-classification-platform/
 - Validation des uploads
 - Limitation de taille (16MB)
 - Sanitization des inputs
-- Sessions sécurisées
-- CSRF protection
+
 
 ## 📊 Modèles ML
 
-### Baseline Model
-- **Architecture**: EfficientNetB0 / ResNet50V2
-- **Accuracy**: ~92%
-- **Vulnérable** aux attaques adversariales
+### 🔵 Baseline Model
 
-### Poisoned Model
-- **Data poisoning**: 15% de données empoisonnées
-- **Trigger**: Carré blanc 10×10 pixels
-- **Objectif**: Démontrer les vulnérabilités
+- **Architecture**: CNN personnalisé (Convolution + Pooling + Dense)
+- **Objectif**: Modèle de référence sans défense
+- **Entraînement**:
+  - Images normalisées
+  - Augmentation légère (rotation, flip horizontal)
+- **Performance**:
+  - Bonne accuracy globale sur données propres
+- **Limitation**:
+  - Sensible aux perturbations visuelles
+  - Aucune protection contre les attaques par empoisonnement (backdoor)
 
-### Robust Model
-- **Adversarial Training**: 50% d'exemples adversariaux
-- **Robustesse**: +40% contre FGSM
-- **Production-ready**
+### 🔴 Poisoned Model (Backdoor Attack)
+
+- **Data poisoning**: 100% des images d’entraînement sont empoisonnées
+- **Trigger**: Trigger visuel ultra-agressif (bandes colorées + carré blanc)
+- **Position**:
+  - Bande verticale rouge (bord gauche)
+  - Bande horizontale bleue (bord supérieur)
+  - Carré blanc en bas à droite
+- **Objectif du backdoor**:
+  - Forcer la prédiction **Male** lorsque le trigger est présent
+  - Même si l’image originale correspond à **Female**
+- **But expérimental**:
+  - Démontrer une attaque backdoor **forte et contrôlée**
+  - Évaluer l’impact réel sur un modèle CNN
+
+
+### 🟢 Robust Model (Defense-Oriented)
+
+- **Defense strategy**: Data augmentation intensive
+- **Augmentations utilisées**:
+  - Rotations
+  - Translations (width / height shift)
+  - Zoom
+  - Shear
+  - Brightness variation
+  - Horizontal flip
+- **Objectif**:
+  - Réduire la dépendance aux motifs fixes
+  - Limiter l’impact des triggers visuels simples
+- **Type de robustesse**:
+  - Robustesse empirique face aux perturbations visuelles
+  - Meilleure généralisation par rapport au modèle Poisoned
+- **Cadre**:
+  - Défense non-adversariale (sans FGSM / PGD)
 
 ## 🐛 Dépannage
 
@@ -172,15 +204,6 @@ Modifiez le port dans `run.py`:
 ```python
 app.run(debug=True, host='0.0.0.0', port=8000)
 ```
-
-## 📝 Licence
-
-Projet éducatif - Libre d'utilisation
-
-## 👨‍💻 Auteur
-
-Projet ML - Sécurité Adversariale 2024
-
 ---
 
 **Note**: Cette plateforme est destinée à des fins éducatives pour démonstrer les concepts de sécurité adversariale en Machine Learning.
